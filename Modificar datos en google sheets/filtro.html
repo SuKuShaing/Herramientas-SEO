@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Generador SEO Utem (Flexible)</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #222; color: #eee; }
+        textarea { width: 100%; background: #333; color: #fff; border: 1px solid #555; padding: 10px; font-size: 14px; }
+        #inputData { height: 150px; }
+        #resultado { height: 80px; background: #111; border-color: #28a745; color: #8fd19e; white-space: pre; overflow-x: auto; }
+        
+        button { padding: 12px 25px; background: #28a745; color: white; border: none; cursor: pointer; margin: 15px 0; font-size: 16px; font-weight: bold; border-radius: 4px; }
+        button:hover { background: #218838; }
+        
+        .label { color: #aaa; margin-bottom: 5px; display: block; }
+        
+        #mensajeCopia {
+            color: #4dfa66;
+            font-weight: bold;
+            margin-left: 10px;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+    </style>
+</head>
+<body>
+
+    <label class="label">1. Pega aquí la tabla (Acepta espacios o comas en la primera columna):</label>
+    <textarea id="inputData" placeholder="Uso - UTEM en acción&#10;h1, title - UTEM en acción&#10;h2 description - Actividades Utem"></textarea>
+
+    <div>
+        <button onclick="procesar()">GENERAR Y COPIAR</button>
+        <span id="mensajeCopia">✅ ¡Copiado al portapapeles!</span>
+    </div>
+
+    <label class="label">2. Resultado (Listo para pegar en Sheets):</label>
+    <textarea id="resultado" readonly></textarea>
+
+    <script>
+        function procesar() {
+            const raw = document.getElementById('inputData').value.trim();
+            if (!raw) return;
+
+            let datos = {
+                uso: [],
+                slug: [],
+                title: [],
+                description: [],
+                h1: []
+            };
+
+            const lineas = raw.split('\n');
+
+            lineas.forEach(linea => {
+                linea = linea.trim();
+                if (!linea) return;
+
+                // 1. Separar CLAVE - VALOR
+                // Detectamos Tab (Sheets) o Guión (Texto)
+                let partes = linea.split('\t');
+                if (partes.length < 2 && linea.includes('-')) {
+                    const primerGuion = linea.indexOf('-');
+                    const clave = linea.substring(0, primerGuion);
+                    const valor = linea.substring(primerGuion + 1);
+                    partes = [clave, valor];
+                }
+
+                if (partes.length >= 2) {
+                    const clavesRaw = partes[0].toLowerCase(); 
+                    const valor = partes[1].trim();
+                    
+                    // --- CAMBIO AQUÍ ---
+                    // Antes: clavesRaw.split(',')
+                    // Ahora: Usamos Regex /[\s,]+/ para cortar por espacio O coma
+                    // .filter(k => k) elimina espacios vacíos que puedan quedar
+                    const claves = clavesRaw.split(/[\s,]+/).filter(k => k);
+
+                    claves.forEach(k => {
+                        Object.keys(datos).forEach(llaveDato => {
+                            if (k === llaveDato) {
+                                datos[llaveDato].push(valor);
+                            }
+                        });
+                    });
+                }
+            });
+
+            // --- LÓGICA DE SALIDA ---
+
+            const usoStr = datos.uso.join(' ');
+            const titleStr = datos.title.join(' ');
+            const descStr = datos.description.join(' ');
+            const h1Str = datos.h1.join(' ');
+            
+            let slugStr = datos.slug.join(' ');
+            if (!slugStr) {
+                slugStr = titleStr; // Fallback al title si no hay slug
+            }
+
+            // Orden: Uso | Slug | Title | Description | H1
+            const arrayFinal = [
+                usoStr,
+                slugStr,
+                titleStr,
+                descStr,
+                h1Str
+            ];
+
+            // Tabulación para Sheets
+            const resultadoFinal = arrayFinal.join('\t');
+
+            const output = document.getElementById('resultado');
+            output.value = resultadoFinal;
+
+            // --- AUTO COPY ---
+            output.select();
+            document.execCommand('copy'); 
+
+            // Feedback visual
+            const msg = document.getElementById('mensajeCopia');
+            msg.style.opacity = 1;
+            setTimeout(() => {
+                msg.style.opacity = 0;
+            }, 2000);
+        }
+    </script>
+</body>
+</html>

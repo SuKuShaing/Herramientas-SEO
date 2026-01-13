@@ -1,29 +1,35 @@
 /**
- * Esta código se ejecuta en Apps Script de google Sheets
- * Verifica si las palabras clave existen en la etiqueta HTML.
- * - Soporta celdas con múltiples URLs (toma solo la primera).
- * - Devuelve "Si" o el número de palabras que faltan.
- *
- * @param {string} url La URL (o lista de URLs) a analizar.
+ * Verifica SEO o devuelve el total de palabras si la URL es un guion "-".
+ * * @param {string} url La URL a analizar (si es "-" retorna el conteo total de palabras).
  * @param {string} tipo El tipo de etiqueta: "title", "description" o "h1".
  * @param {string} textoEsperado Las palabras clave a buscar.
- * @return {string|number} "Si" o el número de palabras faltantes.
+ * @return {string|number} "Si", número de faltantes, o total de palabras si es "-".
  * @customfunction
  */
 function VERIFICAR_SEO(url, tipo, textoEsperado) {
     if (!url || !textoEsperado) return "";
 
-    try {
-        // --- NUEVO: LÓGICA DE SELECCIÓN DE URL ---
-        // 1. Convertimos a string
-        // 2. Separamos por: comas (,), punto y coma (;), saltos de línea (\n) o espacios (\s)
-        // 3. Tomamos el primer elemento ([0]) y limpiamos espacios vacíos (.trim())
-        var urlFinal = url
-            .toString()
-            .split(/[,;\n\s]+/)[0]
-            .trim();
+    // 1. Limpieza inicial de la URL (toma la primera si hay varias)
+    var urlFinal = url
+        .toString()
+        .split(/[,;\n\s]+/)[0]
+        .trim();
 
-        // Verificamos que haya quedado algo parecido a una URL (opcional, para evitar errores feos)
+    // --- NUEVA LÓGICA: CASO GUION "-" ---
+    if (urlFinal === "-") {
+        // Si es un guion, simplemente contamos cuántas palabras tiene el texto esperado
+        var palabras = textoEsperado
+            .toString()
+            .trim()
+            .split(/\s+/)
+            .filter(function (p) {
+                return p.length > 0;
+            });
+        return palabras.length;
+    }
+
+    try {
+        // Verificación básica de URL válida antes de intentar conectar
         if (urlFinal.length < 4) return "URL inválida";
 
         var options = {
@@ -31,14 +37,13 @@ function VERIFICAR_SEO(url, tipo, textoEsperado) {
             followRedirects: true,
         };
 
-        // Usamos 'urlFinal' en lugar de la variable 'url' original
         var response = UrlFetchApp.fetch(urlFinal, options);
         var html = response.getContentText();
         var responseCode = response.getResponseCode();
 
         if (responseCode !== 200) return "Error " + responseCode;
 
-        // --- (El resto del código sigue igual) ---
+        // --- Extracción (Igual que antes) ---
         var contenidoEncontrado = "";
 
         if (tipo.toLowerCase() === "title") {
@@ -54,6 +59,7 @@ function VERIFICAR_SEO(url, tipo, textoEsperado) {
             contenidoEncontrado = match ? match[1] : "";
         }
 
+        // --- Comparación y Conteo ---
         var limpiar = function (txt) {
             return txt
                 .toString()
@@ -66,10 +72,12 @@ function VERIFICAR_SEO(url, tipo, textoEsperado) {
         var contenidoLimpio = limpiar(contenidoEncontrado);
         var inputLimpio = limpiar(textoEsperado);
 
+        // Lista de palabras buscadas
         var palabrasClave = inputLimpio.split(" ").filter(function (p) {
             return p.length > 0;
         });
 
+        // Filtramos las que NO están
         var palabrasQueFaltan = palabrasClave.filter(function (palabra) {
             return !contenidoLimpio.includes(palabra);
         });

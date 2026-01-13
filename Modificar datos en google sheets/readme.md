@@ -1,1 +1,1 @@
-Se añade una web para tomar el contenido y entregarlo filtrado
+web para filtar, en la cual se carga un tabla copiada de excel o sheets y retorna ciertos valores solicitados

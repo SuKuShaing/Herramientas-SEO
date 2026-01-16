@@ -1,3 +1,14 @@
+# Extracción de palabras seleccionadas en google Ads
+
+Sacar palabras e información seleccionadas de google ads
+
+![screen de google Ads](./screen-de-google-Ads.png)
+
+El código se pega en la consola
+![screen de la consola](./screen-de-la-consola.png)
+
+## Historial de cambios
+
 1. el código que está en el archivo 1 es el primer código entregado y logra extraer las palabras seleccionadas
 2. el que está en el archivo 2, entrega las columnas que contienen valores monetarios como números y sin la moneda CLP
 3. El archivo 3 copia automaticamente en formato tabla, antes lo dejaba en el portapapeles como json

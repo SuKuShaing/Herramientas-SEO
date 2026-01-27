@@ -1,23 +1,47 @@
 /**
- * Verifica SEO o devuelve el total de palabras si la URL es un guion "-".
- * * @param {string} url La URL a analizar (si es "-" retorna el conteo total de palabras).
+ * Verifica SEO priorizando la URL Nueva. Si no existe, usa la Antigua.
+ *
+ * @param {string} urlAntigua La URL original (Columna C).
+ * @param {string} urlNueva La URL nueva (Columna D, por ejemplo). Si está vacía, se usa la antigua.
  * @param {string} tipo El tipo de etiqueta: "title", "description" o "h1".
  * @param {string} textoEsperado Las palabras clave a buscar.
  * @return {string|number} "Si", número de faltantes, o total de palabras si es "-".
  * @customfunction
  */
-function VERIFICAR_SEO(url, tipo, textoEsperado) {
-    if (!url || !textoEsperado) return "";
+function VERIFICAR_SEO(urlAntigua, urlNueva, tipo, textoEsperado) {
+    // Validamos que haya al menos texto esperado y alguna URL (antigua o nueva)
+    if (!textoEsperado) return "";
 
-    // 1. Limpieza inicial de la URL (toma la primera si hay varias)
-    var urlFinal = url
-        .toString()
-        .split(/[,;\n\s]+/)[0]
-        .trim();
+    // 1. Función auxiliar para limpiar URLs (quita espacios, toma la primera si hay varias)
+    var limpiarUrl = function (u) {
+        if (!u) return "";
+        return u
+            .toString()
+            .split(/[,;\n\s]+/)[0]
+            .trim();
+    };
 
-    // --- NUEVA LÓGICA: CASO GUION "-" ---
+    var limpiaAntigua = limpiarUrl(urlAntigua);
+    var limpiaNueva = limpiarUrl(urlNueva);
+
+    // 2. Lógica de Selección: ¿Cuál usamos?
+    // Asumimos por defecto la antigua
+    var urlFinal = limpiaAntigua;
+
+    // Si la nueva existe y tiene una longitud razonable (ej. más de 3 caracteres, para evitar errores),
+    // entonces la nueva tiene prioridad y sobrescribe a la antigua.
+    if (limpiaNueva && limpiaNueva.length > 3) {
+        urlFinal = limpiaNueva;
+    }
+
+    // Nota: Si pusiste un guion "-" en la URL Nueva, 'limpiaNueva' será "-",
+    // length es 1, por lo tanto NO entra al if y usaría la antigua.
+    // Si quieres que el guion en la nueva signifique "Ya no hay web",
+    // cambia el if a: (limpiaNueva.length > 0)
+
+    // --- 3. Lógica del GUION "-" (Igual que antes) ---
+    // Si la URL elegida es un guion, devolvemos el total de palabras del texto esperado
     if (urlFinal === "-") {
-        // Si es un guion, simplemente contamos cuántas palabras tiene el texto esperado
         var palabras = textoEsperado
             .toString()
             .trim()
@@ -29,7 +53,7 @@ function VERIFICAR_SEO(url, tipo, textoEsperado) {
     }
 
     try {
-        // Verificación básica de URL válida antes de intentar conectar
+        // Verificación básica
         if (urlFinal.length < 4) return "URL inválida";
 
         var options = {
@@ -37,13 +61,14 @@ function VERIFICAR_SEO(url, tipo, textoEsperado) {
             followRedirects: true,
         };
 
+        // Hacemos fetch a la URL elegida (urlFinal)
         var response = UrlFetchApp.fetch(urlFinal, options);
         var html = response.getContentText();
         var responseCode = response.getResponseCode();
 
         if (responseCode !== 200) return "Error " + responseCode;
 
-        // --- Extracción (Igual que antes) ---
+        // --- 4. Extracción (Igual que antes) ---
         var contenidoEncontrado = "";
 
         if (tipo.toLowerCase() === "title") {
@@ -51,7 +76,7 @@ function VERIFICAR_SEO(url, tipo, textoEsperado) {
             contenidoEncontrado = match ? match[1] : "";
         } else if (tipo.toLowerCase() === "description") {
             var match = html.match(
-                /<meta[^>]*name=["']description["'][^>]*content=["']([\s\S]*?)["']/i
+                /<meta[^>]*name=["']description["'][^>]*content=["']([\s\S]*?)["']/i,
             );
             contenidoEncontrado = match ? match[1] : "";
         } else if (tipo.toLowerCase() === "h1") {
@@ -59,8 +84,8 @@ function VERIFICAR_SEO(url, tipo, textoEsperado) {
             contenidoEncontrado = match ? match[1] : "";
         }
 
-        // --- Comparación y Conteo ---
-        var limpiar = function (txt) {
+        // --- 5. Comparación y Conteo ---
+        var limpiarTexto = function (txt) {
             return txt
                 .toString()
                 .toLowerCase()
@@ -69,15 +94,13 @@ function VERIFICAR_SEO(url, tipo, textoEsperado) {
                 .trim();
         };
 
-        var contenidoLimpio = limpiar(contenidoEncontrado);
-        var inputLimpio = limpiar(textoEsperado);
+        var contenidoLimpio = limpiarTexto(contenidoEncontrado);
+        var inputLimpio = limpiarTexto(textoEsperado);
 
-        // Lista de palabras buscadas
         var palabrasClave = inputLimpio.split(" ").filter(function (p) {
             return p.length > 0;
         });
 
-        // Filtramos las que NO están
         var palabrasQueFaltan = palabrasClave.filter(function (palabra) {
             return !contenidoLimpio.includes(palabra);
         });

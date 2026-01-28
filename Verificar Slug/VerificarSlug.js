@@ -1,18 +1,19 @@
 /**
- * Verifica si el texto del slug está presente en la URL nueva (o antigua si la nueva falta).
+ * Verifica las palabras del slug.
+ * Retorna "Si" si TODAS las palabras están en la URL.
+ * Retorna el número de palabras faltantes si falta alguna.
  *
  * @param {string} urlAntigua La URL original.
  * @param {string} urlNueva La URL nueva propuesta.
- * @param {string} slugTexto El texto que debería estar en el slug.
- * @return "Si", "No" o "Casi".
+ * @param {string} slugTexto El texto objetivo.
+ * @return "Si" o el número de palabras que faltan (integer).
  * @customfunction
  */
 function verificarSlug(urlAntigua, urlNueva, slugTexto) {
-    // 1. Validar que exista el texto a buscar (slugTexto)
-    if (!slugTexto || slugTexto.toString().trim() === "") return "No";
+    // 1. Validaciones básicas
+    if (!slugTexto || slugTexto.toString().trim() === "") return "Slug vacío";
 
     // 2. Determinar qué URL usar
-    // Si urlNueva tiene contenido, se usa esa. Si no, se evalúa urlAntigua.
     var url = "";
     if (urlNueva && urlNueva.toString().trim() !== "") {
         url = urlNueva.toString();
@@ -23,12 +24,11 @@ function verificarSlug(urlAntigua, urlNueva, slugTexto) {
     ) {
         url = urlAntigua.toString();
     } else {
-        // Si no hay URL nueva válida y la antigua es "-" o vacía, es un "No"
-        return "No";
+        // Si no hay URL válida, faltan todas las palabras
+        return slugTexto.toString().trim().split(/\s+/).length;
     }
 
-    // 3. Funciones de limpieza (Normalización)
-    // Convertimos a minúsculas y eliminamos acentos para evitar errores (ej: Ingeniería vs Ingenieria)
+    // 3. Normalización (minúsculas y sin tildes)
     var normalizar = function (texto) {
         return texto
             .toString()
@@ -41,33 +41,24 @@ function verificarSlug(urlAntigua, urlNueva, slugTexto) {
     var urlLimpia = normalizar(url);
     var slugInputLimpio = normalizar(slugTexto);
 
-    // 4. LÓGICA "SI" (Coincidencia Exacta de Secuencia)
-    // Convertimos el texto del slug en formato URL (espacios -> guiones)
-    // Ejemplo: "Testimonios Utem" -> "testimonios-utem"
-    var slugFormatoUrl = slugInputLimpio.replace(/\s+/g, "-");
-
-    // Verificamos si la URL contiene exactamente esa secuencia
-    if (urlLimpia.includes(slugFormatoUrl)) {
-        return "Si";
-    }
-
-    // 5. LÓGICA "CASI" (Coincidencia Parcial o Dispersa)
-    // Si no fue exacto, revisamos si al menos contiene las palabras por separado
+    // 4. Contar palabras faltantes
     var palabras = slugInputLimpio.split(" ");
-    var palabrasEncontradas = 0;
+    var palabrasFaltantes = 0;
 
     for (var i = 0; i < palabras.length; i++) {
         var palabra = palabras[i];
-        if (palabra.length > 0 && urlLimpia.includes(palabra)) {
-            palabrasEncontradas++;
+        // Si la palabra existe y NO está en la URL, aumentamos el contador
+        if (palabra.length > 0 && !urlLimpia.includes(palabra)) {
+            palabrasFaltantes++;
         }
     }
 
-    // Si encontró alguna palabra (o todas, pero desordenadas/interrumpidas como en el Ejemplo 7a)
-    if (palabrasEncontradas > 0) {
-        return "Casi";
+    // 5. RESULTADO FINAL
+    // Si faltan 0 palabras (están todas), devolvemos "Si"
+    if (palabrasFaltantes === 0) {
+        return "Si";
+    } else {
+        // Si falta alguna, devolvemos el número
+        return palabrasFaltantes;
     }
-
-    // 6. Si no encontró nada
-    return "No";
 }

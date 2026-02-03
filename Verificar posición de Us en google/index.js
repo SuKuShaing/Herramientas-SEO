@@ -29,46 +29,51 @@ const universities = {
     UAutonoma: "uautonoma.cl",
 };
 
+// todo lo que es en Chile es para que la búsqueda tenga intención y crear historial para las siguientes búsquedas, cosa que no solo salgan videos
+
 const keywords = [
-    "universidad",
-    "ingeniería civil industrial",
-    // "ingeniería comercial",
-    // "derecho",
-    // "administración de empresas",
-    // "carreras universitarias",
-    // "ingeniería civil",
-    // "ingeniería informatica",
-    // "ingeniería industrial",
-    // "ingenieía civil en minas",
-    // "pedagogia",
-    // "quimica y farmacia",
-    // "psicología",
-    // "ingeniería en comercio internacional",
-    // "Arquitectura",
-    // "ingenieria en biotecnologia",
-    // "ingenieria civil biomedica",
-    // "trabajo social",
-    // "ingenieria civil en obras civiles",
-    // "diseno en comunicacion visual",
-    // "dibujante proyectista",
-    // "ingenieria civil en mecanica",
-    // "ingenieria civil electronica",
-    // "ingenieria civil en ciencia de datos",
-    // "administracion publica",
-    // "ingenieria comercial",
-    // "diseno industrial",
-    // "ingenieria civil quimica",
-    // "bibliotecologia y documentacion",
-    // "ingenieria en construccion",
-    // "ingenieria industrial",
-    // "ingenieria civil matematica",
-    // "ingenieria en alimentos",
-    // "ingenieria civil en prevencion de riesgos",
-    // "contador publico y auditor",
-    // "ingenieria en gestion turistica",
-    // "quimica industrial",
-    // "ingenieria en geomensura",
-    // "bachillerato en ciencias de la ingenieria",
+    "Dónde estudiar en Chile",
+    "universidades en Chile",
+    "universidades en Chile con ingeniería en Chile",
+    "universidades en Chile con carreras universitarias en chile",
+    "universidades en Chile con ingeniería civil industrial",
+    "universidades en Chile con ingeniería comercial",
+    "universidades en Chile con derecho",
+    "universidades en Chile con administración de empresas",
+    "universidades en Chile con ingeniería civil",
+    "universidades en Chile con ingeniería informática",
+    "universidades en Chile con ingeniería industrial",
+    "universidades en Chile con ingeniería civil en minas",
+    "universidades en Chile con pedagogía",
+    "universidades en Chile con química y farmacia",
+    "universidades en Chile con psicología",
+    "universidades en Chile con ingeniería en comercio internacional",
+    "universidades en Chile con Arquitectura",
+    "universidades en Chile con ingeniería en biotecnología",
+    "universidades en Chile con ingeniería civil biomédica",
+    "universidades en Chile con trabajo social",
+    "universidades en Chile con ingeniería civil en obras civiles",
+    "universidades en Chile con diseño en comunicación visual",
+    "universidades en Chile con dibujante proyectista",
+    "universidades en Chile con ingeniería civil en mecánica",
+    "universidades en Chile con ingeniería civil electrónica",
+    "universidades en Chile con ingeniería civil en ciencia de datos",
+    "universidades en Chile con administración pública",
+    "universidades en Chile con ingeniería comercial",
+    "universidades en Chile con diseño industrial",
+    "universidades en Chile con ingeniería civil química",
+    "universidades en Chile con bibliotecología y documentación",
+    "universidades en Chile con ingeniería en construcción",
+    "universidades en Chile con ingeniería industrial",
+    "universidades en Chile con ingeniería civil matemática",
+    "universidades en Chile con ingeniería en alimentos",
+    "universidades en Chile con ingeniería civil en prevención de riesgos",
+    "universidades en Chile con contador público y auditor",
+    "universidades en Chile con ingeniería en gestión turística",
+    "universidades en Chile con química industrial",
+    "universidades en Chile con ingeniería en geomensura",
+    "universidades en Chile con bachillerato en ciencias de la ingeniería",
+    "universidades en Chile con administración pública",
 ];
 
 async function runScraper() {
@@ -98,7 +103,10 @@ async function runScraper() {
             );
             try {
                 await page.goto(
-                    `https://www.google.cl/search?q=${encodeURIComponent(keyword)}&start=${startParam}`,
+                    `https://www.google.cl/search?q=${encodeURIComponent(
+                        keyword +
+                            " -site:youtube.com -site:facebook.com -site:instagram.com -site:twitter.com -site:tiktok.com  -site:linkedin.com  -site:wikipedia.org",
+                    )}&start=${startParam}&gl=cl&hl=es`,
                     { waitUntil: "domcontentloaded" },
                 );
 
@@ -116,7 +124,9 @@ async function runScraper() {
                 });
 
                 globalResults = globalResults.concat(pageResults);
-                await new Promise((r) => setTimeout(r, 1500)); // Pequeña pausa
+                await new Promise((r) =>
+                    setTimeout(r, entreValores(1200, 4000)),
+                ); // Pequeña pausa
             } catch (error) {
                 console.error(`Error en pág ${i}:`, error.message);
             }
@@ -145,21 +155,30 @@ async function runScraper() {
     await browser.close();
 
     // ==========================================
-    // IMPRESIÓN LIMPIA PARA COPIAR A SHEETS
+    // GUARDADO EN CSV
     // ==========================================
-    console.log("\n\n📋 --- INICIO DE DATOS PARA COPIAR --- 📋\n");
+    const fs = require("fs");
+    const headers = ["Búsqueda", ...Object.keys(universities)];
 
-    // 1. Imprimir Cabecera
-    // Usamos , (coma) para separar columnas
-    const headers = ["Busqueda", ...Object.keys(universities)];
-    console.log(headers.join(","));
+    // Crear el contenido del CSV
+    // Usamos ; como separador por si las keywords tienen comas, aunque en este caso no parece
+    // Pero el usuario usaba comas en su output, mantengamos comas.
+    const csvContent = [
+        headers.join(","),
+        ...finalData.map((row) => row.join(",")),
+    ].join("\n");
 
-    // 2. Imprimir Filas
-    finalData.forEach((row) => {
-        console.log(row.join(","));
-    });
+    const outputPath = "resultados.csv";
+    fs.writeFileSync(outputPath, csvContent, "utf-8");
 
-    console.log("\n📋 --- FIN DE DATOS PARA COPIAR --- 📋\n");
+    console.log(
+        `\n\n✅ Proceso finalizado. Se han guardado ${finalData.length} filas en: ${outputPath}`,
+    );
+    console.log("RECUERDA BORRAR LA PRIMERA FILA: Dónde estudiar en Chile");
 }
 
 runScraper();
+
+function entreValores(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}

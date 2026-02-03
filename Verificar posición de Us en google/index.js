@@ -84,13 +84,18 @@ async function runScraper() {
     const finalData = [];
 
     for (const keyword of keywords) {
-        console.log(`🔍 Buscando: "${keyword}"...`); // Esto sale en consola para que veas el progreso
+        console.log("================================");
+        console.log(`Buscando: "${keyword}"`);
+        console.log("================================");
 
         let globalResults = [];
 
         // --- BUCLE DE PÁGINAS ---
         for (let i = 0; i < pagesToScrape; i++) {
             const startParam = i * 10;
+            console.log(
+                `        Leyendo página ${i + 1} (start=${startParam})...`,
+            );
             try {
                 await page.goto(
                     `https://www.google.cl/search?q=${encodeURIComponent(keyword)}&start=${startParam}`,
@@ -117,6 +122,10 @@ async function runScraper() {
             }
         }
 
+        console.log(
+            `    ✅ Total acumulado: ${globalResults.length} enlaces.\n`,
+        );
+
         // --- CALCULO DE POSICIONES ---
         const rowValues = [keyword]; // La primera columna es la palabra clave
 
@@ -141,7 +150,7 @@ async function runScraper() {
     console.log("\n\n📋 --- INICIO DE DATOS PARA COPIAR --- 📋\n");
 
     // 1. Imprimir Cabecera
-    // Usamos \t (tabulador) para separar columnas
+    // Usamos , (coma) para separar columnas
     const headers = ["Busqueda", ...Object.keys(universities)];
     console.log(headers.join(","));
 

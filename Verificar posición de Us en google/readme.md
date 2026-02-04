@@ -32,7 +32,7 @@ Esto instalará `puppeteer-extra` y `puppeteer-extra-plugin-stealth` principalme
 
 Para ejecutar el script:
 
-```bash
+```sh
 node index.js
 ```
 

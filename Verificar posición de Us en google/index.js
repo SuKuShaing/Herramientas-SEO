@@ -88,9 +88,10 @@ async function runScraper() {
     // Guardaremos todo en un array para imprimirlo al final
     const finalData = [];
 
-    for (const keyword of keywords) {
+    for (let i = 0; i < keywords.length; i++) {
+        const keyword = keywords[i];
         console.log("================================");
-        console.log(`Buscando: "${keyword}"`);
+        console.log(`${i + 1}/${keywords.length} - Buscando: "${keyword}"`);
         console.log("================================");
 
         let globalResults = [];
@@ -105,7 +106,7 @@ async function runScraper() {
                 await page.goto(
                     `https://www.google.cl/search?q=${encodeURIComponent(
                         keyword +
-                            " -site:youtube.com -site:facebook.com -site:instagram.com -site:twitter.com -site:tiktok.com  -site:linkedin.com  -site:wikipedia.org",
+                            " -site:youtube.com -site:facebook.com -site:instagram.com -site:twitter.com -site:tiktok.com  -site:linkedin.com  -site:wikipedia.org -site:reddit.com",
                     )}&start=${startParam}&gl=cl&hl=es`,
                     { waitUntil: "domcontentloaded" },
                 );
@@ -125,7 +126,7 @@ async function runScraper() {
 
                 globalResults = globalResults.concat(pageResults);
                 await new Promise((r) =>
-                    setTimeout(r, entreValores(1200, 4000)),
+                    setTimeout(r, entreValores(1000, 5000)),
                 ); // Pequeña pausa
             } catch (error) {
                 console.error(`Error en pág ${i}:`, error.message);

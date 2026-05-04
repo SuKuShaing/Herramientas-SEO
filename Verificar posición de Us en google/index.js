@@ -111,6 +111,31 @@ async function runScraper() {
                     { waitUntil: "domcontentloaded" },
                 );
 
+                // --- LÓGICA DE CAPTCHA ---
+                const checkCaptcha = async () => {
+                    try {
+                        const el = await page.$('#captcha, form[action*="CaptchaRedirect"], iframe[src*="recaptcha"]');
+                        return el !== null || page.url().includes('/sorry/');
+                    } catch (e) {
+                        // Si ocurre una navegación (Context destroyed), asumimos true 
+                        // para NO romper el bucle prematuramente y revisar de nuevo.
+                        return true;
+                    }
+                };
+
+                if (await checkCaptcha()) {
+                    console.log("    ⚠️ CAPTCHA detectado. Por favor, resuélvelo en el navegador. Esperando...");
+                    
+                    while (await checkCaptcha()) {
+                        await new Promise(resolve => setTimeout(resolve, 2000));
+                    }
+                    
+                    // Dar un par de segundos extra para que el DOM de los resultados termine de renderizar
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    console.log("    ✅ CAPTCHA resuelto. Continuando...");
+                }
+                // -------------------------
+
                 try {
                     await page.waitForSelector(".yuRUbf", { timeout: 10000 });
                 } catch (e) {

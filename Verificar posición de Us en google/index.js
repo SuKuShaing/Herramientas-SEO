@@ -151,7 +151,7 @@ async function runScraper() {
 
                 globalResults = globalResults.concat(pageResults);
                 await new Promise((r) =>
-                    setTimeout(r, entreValores(1000, 5000)),
+                    setTimeout(r, entreValores(1000, 7000)),
                 ); // Pequeña pausa
             } catch (error) {
                 console.error(`Error en pág ${i}:`, error.message);

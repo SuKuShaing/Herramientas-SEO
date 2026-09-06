@@ -6,6 +6,59 @@ puppeteer.use(StealthPlugin());
 const headless = false;
 const pagesToScrape = 2; // Leeremos 2 páginas (aprox 20 resultados)
 
+function normalizeHostname(value) {
+    if (!value) return "";
+
+    const normalizedValue = value
+        .trim()
+        .replace(/\s*[›»].*$/, "")
+        .replace(/\s+/g, "");
+
+    try {
+        const url = new URL(
+            /^https?:\/\//i.test(normalizedValue)
+                ? normalizedValue
+                : `https://${normalizedValue}`,
+        );
+        return url.hostname.toLowerCase().replace(/^www\./, "");
+    } catch {
+        return "";
+    }
+}
+
+function hostnameMatchesDomain(hostname, domain) {
+    const normalizedHostname = normalizeHostname(hostname);
+    const normalizedDomain = normalizeHostname(domain);
+
+    return (
+        normalizedHostname === normalizedDomain ||
+        normalizedHostname.endsWith(`.${normalizedDomain}`)
+    );
+}
+
+function extractOrganicResults() {
+    const resultsArea = document.querySelector("#rso");
+    if (!resultsArea) return [];
+
+    const cards = Array.from(
+        resultsArea.querySelectorAll(".A6K0A[data-rpos]"),
+    );
+
+    return cards
+        .map((card) => {
+            const title = card.querySelector(".yuRUbf h3, h3.LC20lb");
+            const cite = card.querySelector(".yuRUbf cite, cite.qLRx3b");
+
+            if (!title || !cite) return null;
+
+            return {
+                title: title.textContent.trim(),
+                displayedUrl: cite.textContent.trim(),
+            };
+        })
+        .filter(Boolean);
+}
+
 // IMPORTANTE: El orden aquí será el orden de las columnas
 const universities = {
     Utem: "utem.cl",
@@ -17,7 +70,7 @@ const universities = {
     PUCV: "pucv.cl",
     USM: "usm.cl",
     UACH: "uach.cl",
-    Uandes: "andes.cl",
+    Uandes: "uandes.cl",
     UDP: "udp.cl",
     UDLA: "udla.cl",
     UST: "ust.cl",
@@ -137,17 +190,17 @@ async function runScraper() {
                 // -------------------------
 
                 try {
-                    await page.waitForSelector(".yuRUbf", { timeout: 10000 });
+                    await page.waitForSelector(
+                        "#rso .A6K0A[data-rpos] .yuRUbf cite",
+                        { timeout: 10000 },
+                    );
                 } catch (e) {
                     // Si falla el wait, seguimos, quizás no hay más resultados
                 }
 
-                const pageResults = await page.evaluate(() => {
-                    const nodes = Array.from(
-                        document.querySelectorAll("div.yuRUbf a"),
-                    );
-                    return nodes.map((a) => a.href);
-                });
+                const pageResults = await page.evaluate(
+                    extractOrganicResults,
+                );
 
                 globalResults = globalResults.concat(pageResults);
                 await new Promise((r) =>
@@ -159,15 +212,22 @@ async function runScraper() {
         }
 
         console.log(
-            `    ✅ Total acumulado: ${globalResults.length} enlaces.\n`,
+            `    ✅ Total acumulado: ${globalResults.length} resultados orgánicos.\n`,
         );
+
+        if (globalResults.length === 0) {
+            await browser.close();
+            throw new Error(
+                `No se pudieron extraer resultados orgánicos para "${keyword}". Google puede estar mostrando un bloqueo o una estructura diferente.`,
+            );
+        }
 
         // --- CALCULO DE POSICIONES ---
         const rowValues = [keyword]; // La primera columna es la palabra clave
 
         for (const [uniName, domain] of Object.entries(universities)) {
-            const position = globalResults.findIndex((url) =>
-                url.toLowerCase().includes(domain.toLowerCase()),
+            const position = globalResults.findIndex((result) =>
+                hostnameMatchesDomain(result.displayedUrl, domain),
             );
             const limit = pagesToScrape * 10 + 1;
             // Guardamos el valor limpio
@@ -203,7 +263,18 @@ async function runScraper() {
     console.log("RECUERDA BORRAR LA PRIMERA FILA: Dónde estudiar en Chile");
 }
 
-runScraper();
+if (require.main === module) {
+    runScraper().catch((error) => {
+        console.error(`\nError fatal: ${error.message}`);
+        process.exitCode = 1;
+    });
+}
+
+module.exports = {
+    extractOrganicResults,
+    hostnameMatchesDomain,
+    normalizeHostname,
+};
 
 function entreValores(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
